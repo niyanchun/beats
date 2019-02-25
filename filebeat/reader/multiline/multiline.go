@@ -66,7 +66,8 @@ const (
 type matcher func(last, current []byte) bool
 
 var (
-	sigMultilineTimeout = errors.New("multiline timeout")
+	sigMultilineTimeout    = errors.New("multiline timeout")
+	sigMultilineLineExceed = errors.New("multiline line exceed")
 )
 
 // New creates a new multi-line reader combining stream of
@@ -136,6 +137,7 @@ func (mlr *Reader) Next() (reader.Message, error) {
 func (mlr *Reader) readFirst() (reader.Message, error) {
 	for {
 		message, err := mlr.reader.Next()
+		logp.Debug("multiline", "[readFirst] message: %s", message.Content)
 		if err != nil {
 			// no lines buffered -> ignore timeout
 			if err == sigMultilineTimeout {
@@ -163,6 +165,8 @@ func (mlr *Reader) readFirst() (reader.Message, error) {
 func (mlr *Reader) readNext() (reader.Message, error) {
 	for {
 		message, err := mlr.reader.Next()
+		logp.Debug("multiline", "[readNext] message: %s", message.Content)
+
 		if err != nil {
 			// handle multiline timeout signal
 			if err == sigMultilineTimeout {
@@ -236,7 +240,12 @@ func (mlr *Reader) readNext() (reader.Message, error) {
 		}
 
 		// add line to current multiline event
-		mlr.addLine(message)
+		lineExceedErr := mlr.addLine(message)
+		if lineExceedErr != nil {
+			msg := mlr.finalize()
+			mlr.resetState()
+			return msg, nil
+		}
 	}
 }
 
@@ -276,10 +285,12 @@ func (mlr *Reader) finalize() reader.Message {
 // addLine adds the read content to the message
 // The content is only added if maxBytes and maxLines is not exceed. In case one of the
 // two is exceeded, addLine keeps processing but does not add it to the content.
-func (mlr *Reader) addLine(m reader.Message) {
+func (mlr *Reader) addLine(m reader.Message) error {
 	if m.Bytes <= 0 {
-		return
+		return nil
 	}
+
+	logp.Debug("multiline", "[addLine] message: %s", m.Content)
 
 	sz := len(mlr.message.Content)
 	addSeparator := len(mlr.message.Content) > 0 && len(mlr.separator) > 0
@@ -308,6 +319,20 @@ func (mlr *Reader) addLine(m reader.Message) {
 	mlr.last = m.Content
 	mlr.message.Bytes += m.Bytes
 	mlr.message.AddFields(m.Fields)
+
+	if !maxLinesReached {
+		mlr.message.Content = append(mlr.message.Content, m.Content[:]...)
+		logp.Debug("multiline", "[addLine] maxLinesReached, message: %s", m.Content)
+		return sigMultilineLineExceed
+	}
+
+	if !maxBytesReached {
+		mlr.message.Content = append(mlr.message.Content, m.Content[:]...)
+		logp.Debug("multiline", "[addLine] maxBytesReached, message: %s", m.Content)
+		return sigMultilineLineExceed
+	}
+
+	return nil
 }
 
 // resetState sets state of the reader to readFirst
