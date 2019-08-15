@@ -20,6 +20,7 @@ package multiline
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/elastic/beats/filebeat/reader"
@@ -40,17 +41,18 @@ import (
 // Errors will force the multiline reader to return the currently active
 // multiline event first and finally return the actual error on next call to Next.
 type Reader struct {
-	reader       reader.Reader
-	pred         matcher
-	flushMatcher *match.Matcher
-	maxBytes     int // bytes stored in content
-	maxLines     int
-	separator    []byte
-	last         []byte
-	numLines     int
-	err          error // last seen error
-	state        func(*Reader) (reader.Message, error)
-	message      reader.Message
+	reader          reader.Reader
+	pred            matcher
+	flushMatcher    *match.Matcher
+	maxBytes        int // bytes stored in content
+	maxLines        int
+	separator       []byte
+	last            []byte
+	numLines        int
+	err             error // last seen error
+	state           func(*Reader) (reader.Message, error)
+	message         reader.Message
+	stackTraceRegex *regexp.Regexp
 }
 
 const (
@@ -116,15 +118,18 @@ func New(
 		r = timeout.New(r, sigMultilineTimeout, tout)
 	}
 
+	stackTraceRegex, _ := regexp.Compile("^\\[")
+
 	mlr := &Reader{
-		reader:       r,
-		pred:         matcher,
-		flushMatcher: flushMatcher,
-		state:        (*Reader).readFirst,
-		maxBytes:     maxBytes,
-		maxLines:     maxLines,
-		separator:    []byte(separator),
-		message:      reader.Message{},
+		reader:          r,
+		pred:            matcher,
+		flushMatcher:    flushMatcher,
+		state:           (*Reader).readFirst,
+		maxBytes:        maxBytes,
+		maxLines:        maxLines,
+		separator:       []byte(separator),
+		message:         reader.Message{},
+		stackTraceRegex: stackTraceRegex,
 	}
 	return mlr, nil
 }
@@ -290,6 +295,8 @@ func (mlr *Reader) addLine(m reader.Message) error {
 		return nil
 	}
 
+	logp.Info("1111111111111111111111111")
+
 	logp.Debug("multiline", "[addLine] message: %s", m.Content)
 
 	sz := len(mlr.message.Content)
@@ -320,7 +327,7 @@ func (mlr *Reader) addLine(m reader.Message) error {
 	mlr.message.Bytes += m.Bytes
 	mlr.message.AddFields(m.Fields)
 
-	if !maxLinesReached {
+	if !maxLinesReached && mlr.stackTraceRegex.Match(mlr.message.Content) {
 		tmp := mlr.message.Content
 		if addSeparator {
 			tmp = append(tmp, mlr.separator...)
@@ -330,7 +337,7 @@ func (mlr *Reader) addLine(m reader.Message) error {
 		return sigMultilineLineExceed
 	}
 
-	if !maxBytesReached {
+	if !maxBytesReached && mlr.stackTraceRegex.Match(mlr.message.Content) {
 		tmp := mlr.message.Content
 		if addSeparator {
 			tmp = append(tmp, mlr.separator...)
