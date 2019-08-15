@@ -159,6 +159,13 @@ func (mlr *Reader) readFirst() (reader.Message, error) {
 			continue
 		}
 
+		// 如果当前行不是一条完整的日志，那说明这一行属于上一行的一部分，所以把上一行补上
+		prefixMatched := mlr.linePrefixRegexp.Match(message.Content)
+		if !prefixMatched {
+			mlr.last = append(mlr.last, mlr.separator...)
+			message.Content = append(mlr.last, message.Content...)
+		}
+
 		// Start new multiline event
 		mlr.clear()
 		mlr.load(message)
@@ -280,7 +287,7 @@ func (mlr *Reader) load(m reader.Message) {
 // clearBuffer resets the reader buffer variables
 func (mlr *Reader) clear() {
 	mlr.message = reader.Message{}
-	mlr.last = nil
+	// mlr.last = nil
 	mlr.numLines = 0
 	mlr.err = nil
 }
