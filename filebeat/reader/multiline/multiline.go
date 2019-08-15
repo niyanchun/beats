@@ -321,13 +321,21 @@ func (mlr *Reader) addLine(m reader.Message) error {
 	mlr.message.AddFields(m.Fields)
 
 	if !maxLinesReached {
-		mlr.message.Content = append(mlr.message.Content, m.Content[:]...)
+		tmp := mlr.message.Content
+		if addSeparator {
+			tmp = append(tmp, mlr.separator...)
+		}
+		mlr.message.Content = append(tmp, m.Content[:]...)
 		logp.Debug("multiline", "[addLine] maxLinesReached, message: %s", m.Content)
 		return sigMultilineLineExceed
 	}
 
 	if !maxBytesReached {
-		mlr.message.Content = append(mlr.message.Content, m.Content[:]...)
+		tmp := mlr.message.Content
+		if addSeparator {
+			tmp = append(tmp, mlr.separator...)
+		}
+		mlr.message.Content = append(tmp, m.Content[:]...)
 		logp.Debug("multiline", "[addLine] maxBytesReached, message: %s", m.Content)
 		return sigMultilineLineExceed
 	}
