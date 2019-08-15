@@ -41,18 +41,18 @@ import (
 // Errors will force the multiline reader to return the currently active
 // multiline event first and finally return the actual error on next call to Next.
 type Reader struct {
-	reader          reader.Reader
-	pred            matcher
-	flushMatcher    *match.Matcher
-	maxBytes        int // bytes stored in content
-	maxLines        int
-	separator       []byte
-	last            []byte
-	numLines        int
-	err             error // last seen error
-	state           func(*Reader) (reader.Message, error)
-	message         reader.Message
-	stackTraceRegex *regexp.Regexp
+	reader           reader.Reader
+	pred             matcher
+	flushMatcher     *match.Matcher
+	maxBytes         int // bytes stored in content
+	maxLines         int
+	separator        []byte
+	last             []byte
+	numLines         int
+	err              error // last seen error
+	state            func(*Reader) (reader.Message, error)
+	message          reader.Message
+	linePrefixRegexp *regexp.Regexp
 }
 
 const (
@@ -118,18 +118,18 @@ func New(
 		r = timeout.New(r, sigMultilineTimeout, tout)
 	}
 
-	stackTraceRegex, _ := regexp.Compile("^\\[")
+	linePrefixRegexp, _ := regexp.Compile(config.LinePrefix)
 
 	mlr := &Reader{
-		reader:          r,
-		pred:            matcher,
-		flushMatcher:    flushMatcher,
-		state:           (*Reader).readFirst,
-		maxBytes:        maxBytes,
-		maxLines:        maxLines,
-		separator:       []byte(separator),
-		message:         reader.Message{},
-		stackTraceRegex: stackTraceRegex,
+		reader:           r,
+		pred:             matcher,
+		flushMatcher:     flushMatcher,
+		state:            (*Reader).readFirst,
+		maxBytes:         maxBytes,
+		maxLines:         maxLines,
+		separator:        []byte(separator),
+		message:          reader.Message{},
+		linePrefixRegexp: linePrefixRegexp,
 	}
 	return mlr, nil
 }
@@ -142,7 +142,7 @@ func (mlr *Reader) Next() (reader.Message, error) {
 func (mlr *Reader) readFirst() (reader.Message, error) {
 	for {
 		message, err := mlr.reader.Next()
-		logp.Debug("multiline", "[readFirst] message: %s", message.Content)
+		logp.Debug("multiline", "[readFirst] message: %s, err:%v", message.Content, err)
 		if err != nil {
 			// no lines buffered -> ignore timeout
 			if err == sigMultilineTimeout {
@@ -177,6 +177,12 @@ func (mlr *Reader) readNext() (reader.Message, error) {
 			if err == sigMultilineTimeout {
 				// no lines buffered -> ignore timeout
 				if mlr.numLines == 0 {
+					continue
+				}
+
+				// 如果当前行不为空，并且不匹配开头行的话接着收集
+				if message.Bytes > 0 && !mlr.linePrefixRegexp.Match(message.Content) {
+					logp.Debug("multiline->readNext", "message: %s, err: %v.", message.Content, err)
 					continue
 				}
 
@@ -295,9 +301,6 @@ func (mlr *Reader) addLine(m reader.Message) error {
 		return nil
 	}
 
-	logp.Info("1111111111111111111111111")
-	logp.Debug("multiline", "1111111111111111111111111")
-
 	logp.Debug("multiline", "[addLine] message: %s", m.Content)
 
 	sz := len(mlr.message.Content)
@@ -309,7 +312,7 @@ func (mlr *Reader) addLine(m reader.Message) error {
 	space := mlr.maxBytes - sz
 
 	maxBytesReached := (mlr.maxBytes <= 0 || space > 0)
-	maxLinesReached := (mlr.maxLines <= 0 || mlr.numLines < mlr.maxLines)
+	maxLinesReached := (mlr.maxLines <= 0 || mlr.numLines < mlr.maxLines-1)
 
 	if maxBytesReached && maxLinesReached {
 		if space < 0 || space > len(m.Content) {
@@ -328,24 +331,19 @@ func (mlr *Reader) addLine(m reader.Message) error {
 	mlr.message.Bytes += m.Bytes
 	mlr.message.AddFields(m.Fields)
 
-	if !maxLinesReached && mlr.stackTraceRegex.Match(mlr.message.Content) {
+	if !maxLinesReached || !maxBytesReached {
 		tmp := mlr.message.Content
 		if addSeparator {
 			tmp = append(tmp, mlr.separator...)
 		}
 		mlr.message.Content = append(tmp, m.Content[:]...)
-		logp.Debug("multiline", "[addLine] maxLinesReached, message: %s", m.Content)
-		return sigMultilineLineExceed
-	}
+		logp.Debug("multiline", "[addLine] maxLinesReached(%v) or maxBytesReached(%v) reached, message: %s", !maxLinesReached, !maxBytesReached, m.Content)
 
-	if !maxBytesReached && mlr.stackTraceRegex.Match(mlr.message.Content) {
-		tmp := mlr.message.Content
-		if addSeparator {
-			tmp = append(tmp, mlr.separator...)
+		if mlr.linePrefixRegexp.Match(m.Content) {
+			logp.Debug("multiline", "[addLine] max***Reached, and linePrefixRegexp matched")
+			return sigMultilineLineExceed
 		}
-		mlr.message.Content = append(tmp, m.Content[:]...)
-		logp.Debug("multiline", "[addLine] maxBytesReached, message: %s", m.Content)
-		return sigMultilineLineExceed
+		return nil
 	}
 
 	return nil

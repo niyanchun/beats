@@ -32,6 +32,7 @@ type Config struct {
 	Pattern      *match.Matcher `config:"pattern" validate:"required"`
 	Timeout      *time.Duration `config:"timeout" validate:"positive"`
 	FlushPattern *match.Matcher `config:"flush_pattern"`
+	LinePrefix   string         `config:"line_prefix" validate:"required"`
 }
 
 // Validate validates the Config option for multiline reader.
