@@ -296,6 +296,7 @@ func (mlr *Reader) addLine(m reader.Message) error {
 	}
 
 	logp.Info("1111111111111111111111111")
+	logp.Debug("multiline", "1111111111111111111111111")
 
 	logp.Debug("multiline", "[addLine] message: %s", m.Content)
 
