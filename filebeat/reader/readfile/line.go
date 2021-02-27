@@ -125,7 +125,7 @@ func (r *LineReader) advance() error {
 
 		buf := make([]byte, r.bufferSize)
 
-		// try to read more bytes into buffer
+		// try to read more bytes into buffer   filebeat/input/log/log.go
 		n, err := r.reader.Read(buf)
 
 		// Appends buffer also in case of err

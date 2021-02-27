@@ -179,7 +179,7 @@ func Run(settings Settings, bt beat.Creator) error {
 		beatRegistry := stateRegistry.NewRegistry("beat")
 		monitoring.NewString(beatRegistry, "name").Set(b.Info.Name)
 		monitoring.NewFunc(stateRegistry, "host", host.ReportInfo, monitoring.Report)
-
+		// step5: 跳到本文件的launch方法
 		return b.launch(settings, bt)
 	}())
 }
@@ -408,7 +408,7 @@ func (b *Beat) launch(settings Settings, bt beat.Creator) error {
 	// Launch config manager
 	b.ConfigManager.Start()
 	defer b.ConfigManager.Stop()
-
+	// step6: 跳到filebeat/beater/filebeat.go
 	return beater.Run(&b.Beat)
 }
 

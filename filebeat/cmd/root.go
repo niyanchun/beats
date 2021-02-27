@@ -38,6 +38,7 @@ func init() {
 	runFlags.AddGoFlag(flag.CommandLine.Lookup("once"))
 	runFlags.AddGoFlag(flag.CommandLine.Lookup("modules"))
 
+	// step2: 进入到libbeat/cmd/root.go
 	RootCmd = cmd.GenRootCmdWithRunFlags(Name, "", beater.New, runFlags)
 	RootCmd.PersistentFlags().AddGoFlag(flag.CommandLine.Lookup("M"))
 	RootCmd.TestCmd.Flags().AddGoFlag(flag.CommandLine.Lookup("modules"))

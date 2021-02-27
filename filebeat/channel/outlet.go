@@ -67,7 +67,7 @@ func (o *outlet) OnEvent(d *util.Data) bool {
 		o.wg.Add(1)
 	}
 
-	o.client.Publish(event)
+	o.client.Publish(event) // 跳到libbeat/publisher/pipeline/client.go#Publish
 
 	// Note: race condition on shutdown:
 	//  The underlying beat.Client is asynchronous. Without proper ACK

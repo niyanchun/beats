@@ -92,7 +92,7 @@ func (r *Registry) Start(h Harvester) error {
 			r.remove(h)
 			r.wg.Done()
 		}()
-		// Starts harvester and picks the right type. In case type is not set, set it to default (log)
+		// Starts harvester and picks the right type. In case type is not set, set it to default (log)	filebeat/input/log/harvester.go#Run
 		err := h.Run()
 		if err != nil {
 			logp.Err("Error running input: %v", err)

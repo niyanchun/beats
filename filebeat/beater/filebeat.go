@@ -371,6 +371,7 @@ func (fb *Filebeat) Run(b *beat.Beat) error {
 		logp.Debug("modules", "Existing Ingest pipelines will be updated")
 	}
 
+	// step6
 	err = crawler.Start(b.Publisher, registrar, config.ConfigInput, config.ConfigModules, pipelineLoaderFactory, config.OverwritePipelines)
 	if err != nil {
 		crawler.Stop()

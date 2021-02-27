@@ -57,7 +57,7 @@ func (b *backoffClient) Close() error {
 }
 
 func (b *backoffClient) Publish(batch publisher.Batch) error {
-	err := b.client.Publish(batch)
+	err := b.client.Publish(batch) // libbeat/outputs/elasticsearch/client.go
 	if err != nil {
 		b.client.Close()
 	}

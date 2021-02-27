@@ -68,7 +68,7 @@ func (b *Batch) Events() []publisher.Event {
 
 func (b *Batch) ACK() {
 	b.ctx.observer.outBatchACKed(len(b.events))
-	b.original.ACK()
+	b.original.ACK() // libbeat/publiser/queue/memequeue/consumer.go
 	releaseBatch(b)
 }
 

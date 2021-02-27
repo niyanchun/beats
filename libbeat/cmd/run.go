@@ -34,6 +34,7 @@ func genRunCmd(settings instance.Settings, beatCreator beat.Creator, runFlags *p
 		Use:   "run",
 		Short: "Run " + name,
 		Run: func(cmd *cobra.Command, args []string) {
+			// step4: 跳到libbeat/cmd/instance/beat.go
 			err := instance.Run(settings, beatCreator)
 			if err != nil {
 				os.Exit(1)

@@ -120,7 +120,7 @@ func (c *client) publish(e beat.Event) {
 	if c.canDrop {
 		published = c.producer.TryPublish(pubEvent)
 	} else {
-		published = c.producer.Publish(pubEvent)
+		published = c.producer.Publish(pubEvent) // queue/memqueue/produce.go
 	}
 
 	if published {

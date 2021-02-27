@@ -108,7 +108,7 @@ func GenRootCmdWithSettings(beatCreator beat.Creator, settings instance.Settings
 	}
 
 	// must be updated prior to CLI flag handling.
-
+	// step3: 跳到libbeat/cmd/run.go
 	rootCmd.RunCmd = genRunCmd(settings, beatCreator, runFlags)
 	rootCmd.SetupCmd = genSetupCmd(name, indexPrefix, version, beatCreator)
 	rootCmd.VersionCmd = genVersionCmd(name, version)

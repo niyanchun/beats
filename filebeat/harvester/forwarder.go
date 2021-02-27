@@ -47,7 +47,7 @@ func NewForwarder(outlet Outlet) *Forwarder {
 // Send updates the input state and sends the event to the spooler
 // All state updates done by the input itself are synchronous to make sure no states are overwritten
 func (f *Forwarder) Send(data *util.Data) error {
-	ok := f.Outlet.OnEvent(data)
+	ok := f.Outlet.OnEvent(data) // filebeat/channel/util.go
 	if !ok {
 		logp.Info("Input outlet closed")
 		return errors.New("input outlet closed")

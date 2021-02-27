@@ -291,7 +291,7 @@ func newBufferingEventLoop(b *Broker, size int, minEvents int, flushTimeout time
 		maxEvents:    size,
 		minEvents:    minEvents,
 		flushTimeout: flushTimeout,
-
+		// 直接使用Broker的events
 		events:    b.events,
 		get:       nil,
 		pubCancel: b.pubCancel,
@@ -347,6 +347,7 @@ func (l *bufferingEventLoop) handleInsert(req *pushRequest) {
 	if l.insert(req) {
 		l.eventCount++
 		if l.eventCount == l.maxEvents {
+			// 队列面了就把chan设置为nil，此时写会被阻塞。等收到ack（handleACK）后又会恢复队列
 			l.events = nil // stop inserting events if upper limit is reached
 		}
 
@@ -464,6 +465,7 @@ func (l *bufferingEventLoop) handleConsumer(req *getRequest) {
 
 func (l *bufferingEventLoop) handleACK(count int) {
 	l.eventCount -= count
+	// 收到ACK后恢复队列
 	if l.eventCount < l.maxEvents {
 		l.events = l.broker.events
 	}

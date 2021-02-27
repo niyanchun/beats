@@ -135,7 +135,7 @@ func (p *Runner) Start() {
 
 // Run starts scanning through all the file paths and fetch the related files. Start a harvester for each file
 func (p *Runner) Run() {
-	// Initial input run
+	// Initial input run  跳转到 filebeat/log/input.go#Run
 	p.input.Run()
 
 	// Shuts down after the first complete run of all input

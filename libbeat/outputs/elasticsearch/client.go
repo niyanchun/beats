@@ -281,7 +281,7 @@ func (client *Client) Publish(batch publisher.Batch) error {
 	events := batch.Events()
 	rest, err := client.publishEvents(events)
 	if len(rest) == 0 {
-		batch.ACK()
+		batch.ACK() // libbeat/publisher/pipeline/batch.go
 	} else {
 		batch.RetryEvents(rest)
 	}

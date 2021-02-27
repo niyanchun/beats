@@ -116,7 +116,7 @@ func (w *netClientWorker) run() {
 				return
 			}
 
-			err := w.client.Publish(batch)
+			err := w.client.Publish(batch) // libbeat/outputs/backoff.go
 			if err != nil {
 				logp.Err("Failed to publish events: %v", err)
 				// on error return to connect loop
